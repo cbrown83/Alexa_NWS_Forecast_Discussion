@@ -18,7 +18,7 @@ HELP_MESSAGE = '''To hear a forecast discussion, say something like \'Alexa, ask
 STOP_MESSAGE = ''
 FALLBACK_MESSAGE = 'I\'m sorry, I could not understand the request. ' + HELP_MESSAGE
 EXCEPTION_MESSAGE = 'Sorry, something went wrong.'
-OFFICE_NOT_FOUND = 'I\'m sorry, the office you requested could not be found.'
+OFFICE_NOT_FOUND = 'No forecast office found in {}.'
 
 sb = SkillBuilder()
 logger = logging.getLogger(__name__)
@@ -38,8 +38,11 @@ class ForecastDiscussionHandler(AbstractRequestHandler):
         slots = handler_input.request_envelope.request.intent.slots
         city = str(slots['city'].value).lower()
 
-        text = get_forecast_discussion(city)
-        speech_output = OFFICE_NOT_FOUND if not text else 'FORECAST DISCUSSION FOR {}. '.format(city.upper()) + text
+        try:
+            text = get_forecast_discussion(city)
+            speech_output = 'FORECAST DISCUSSION FOR {}. '.format(city.upper()) + text
+        except OfficeNotFoundError:
+            speech_output = OFFICE_NOT_FOUND.format(city)
 
         (handler_input.response_builder.speak(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
@@ -210,6 +213,7 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
         # type: (HandlerInput, Exception) -> Response
         logger.info("In CatchAllExceptionHandler")
         logger.error(exception, exc_info=True)
+        logger.info(handler_input.request_envelope.request)
 
         handler_input.response_builder.speak(EXCEPTION_MESSAGE)
 

@@ -2,6 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+class OfficeNotFoundError(Exception):
+    pass
+
 def _get_office_id(office_city):
     page = requests.get('https://www.spc.noaa.gov/misc/NWS_WFO_ID.txt').text
     page = page.split('=')
@@ -13,7 +16,7 @@ def _get_office_id(office_city):
         if (city == office_city):
             return office.split('\t')[-1].upper()
 
-    return ''
+    raise OfficeNotFoundError
 
 def _generate_url(office_city):
     return 'https://forecast.weather.gov/product.php?site={}&issuedby={}&product=AFD&glossary=0'.format(office_city, office_city)
