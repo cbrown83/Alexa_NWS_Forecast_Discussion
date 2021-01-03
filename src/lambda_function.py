@@ -18,14 +18,29 @@ HELP_MESSAGE = '''To hear a forecast discussion, say something like \'Alexa, ask
 STOP_MESSAGE = ''
 FALLBACK_MESSAGE = 'I\'m sorry, I could not understand the request. ' + HELP_MESSAGE
 EXCEPTION_MESSAGE = 'Sorry, something went wrong.'
-OFFICE_NOT_FOUND = 'No forecast office found in {}.'
+OFFICE_NOT_FOUND = 'No forecast office found in {}. Visit www.spc.noaa.gov/misc/NWS_WFO_ID.txt to find a list of valid cities.'
+GET_CITY_TEXT = 'The forecast discussion is fetched from weather forecast offices in the United States. Which city would you like the forecast discussion for?'
 
 sb = SkillBuilder()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-# Built-in Intent Handlers
+class LaunchForecastDiscussionHandler(AbstractRequestHandler):
+    """Handler for LaunchForecastDiscussion Intent."""
+    def can_handle(self, handler_input):
+        # type: (HandlerInput) -> bool
+        return is_request_type("LaunchRequest")(handler_input)
+
+    def handle(self, handler_input):
+        # type: (HandlerInput) -> Response
+        logger.info("In LaunchForecastDiscussionHandler")
+        (handler_input.response_builder.speak(GET_CITY_TEXT)
+                                       .ask(GET_CITY_TEXT)
+                                       .set_card(SimpleCard(SKILL_NAME, GET_CITY_TEXT)))
+
+        return handler_input.response_builder.response
+
 class ForecastDiscussionHandler(AbstractRequestHandler):
     """Handler for ForecastDiscussion Intent."""
     def can_handle(self, handler_input):
@@ -50,7 +65,7 @@ class ForecastDiscussionHandler(AbstractRequestHandler):
         return handler_input.response_builder.response
 
 class ShortTermDiscussionHandler(AbstractRequestHandler):
-    """Handler for ForecastDiscussion Intent."""
+    """Handler for ShortTermDiscussion Intent."""
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         return is_intent_name("ShortTermDiscussionIntent")(handler_input)
@@ -70,7 +85,7 @@ class ShortTermDiscussionHandler(AbstractRequestHandler):
         return handler_input.response_builder.response
 
 class LongTermDiscussionHandler(AbstractRequestHandler):
-    """Handler for ForecastDiscussion Intent."""
+    """Handler for LongTermDiscussion Intent."""
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         return is_intent_name("LongTermDiscussionIntent")(handler_input)
@@ -90,7 +105,7 @@ class LongTermDiscussionHandler(AbstractRequestHandler):
         return handler_input.response_builder.response
 
 class SynopsisHandler(AbstractRequestHandler):
-    """Handler for ForecastDiscussion Intent."""
+    """Handler for Synopsis Intent."""
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         return is_intent_name("SynopsisIntent")(handler_input)
@@ -110,7 +125,7 @@ class SynopsisHandler(AbstractRequestHandler):
         return handler_input.response_builder.response
 
 class ForecastUpdateHandler(AbstractRequestHandler):
-    """Handler for ForecastDiscussion Intent."""
+    """Handler for ForecastUpdate Intent."""
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         return is_intent_name("ForecastUpdateIntent")(handler_input)
@@ -129,6 +144,7 @@ class ForecastUpdateHandler(AbstractRequestHandler):
 
         return handler_input.response_builder.response
 
+# Built-in Intent Handlers
 class HelpIntentHandler(AbstractRequestHandler):
     """Handler for Help Intent."""
 
@@ -239,6 +255,7 @@ class ResponseLogger(AbstractResponseInterceptor):
 
 
 # Register intent handlers
+sb.add_request_handler(LaunchForecastDiscussionHandler())
 sb.add_request_handler(ForecastDiscussionHandler())
 sb.add_request_handler(ShortTermDiscussionHandler())
 sb.add_request_handler(LongTermDiscussionHandler())
