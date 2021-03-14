@@ -6,6 +6,7 @@ class OfficeNotFoundError(Exception):
     pass
 
 def _get_office_id(office_city):
+    first_city = second_city = ''
     page = requests.get('https://www.spc.noaa.gov/misc/NWS_WFO_ID.txt').text
     page = page.split('=')
     while("" in page):
@@ -13,7 +14,11 @@ def _get_office_id(office_city):
     page = page[1].splitlines()
     for office in page:
         city = office.split(',')[0].lower()
-        if (city == office_city):
+        if '/' in city:
+            first_city = city.split('/')[0]
+            second_city = city.split('/')[1]
+        if (city == office_city or 
+            first_city == office_city or second_city == office_city):
             return office.split('\t')[-1].upper()
 
     raise OfficeNotFoundError
