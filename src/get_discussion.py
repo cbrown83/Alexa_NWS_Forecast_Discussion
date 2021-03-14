@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+import re
 
 class OfficeNotFoundError(Exception):
     pass
@@ -46,16 +47,14 @@ def _get_timestamp(text):
         return dt
 
 def _get_section(text, delim):
-    section = 'Last updated: ' + _get_timestamp(text) + '.\n'
+    last_update  = 'Last updated: ' + _get_timestamp(text) + '.\n'
 
-    body = text.split('.'+delim)[1].split('\n\n')[0]
-    timeframe = body.split('...')[0]
-    if (timeframe.find('/') == 1):
-        timeframe = timeframe.strip().strip('/') + ': '
-    body = body.split('...')[1]
-    section += timeframe + body
+    # Extract delim-specified section
+    body = re.split('\n\n\.', text.split('.'+delim)[1])[0]
+    body = re.split('&&', body)[0].strip()
+    body = body.replace('...', ' ')
 
-    return section
+    return last_update + body
 
 def get_short_term_discussion(office_city):
     text = _get_page_text(office_city)
@@ -79,6 +78,7 @@ def get_forecast_update(office_city):
 
 def get_forecast_discussion(office_city):
     text = _get_page_text(office_city)
+    last_update  = 'Last updated: ' + _get_timestamp(text) + '.\n'
     discussion = ''
 
     stripped_text = text.split('.AVIATION')[0].replace('&&\n\n', '')
@@ -89,4 +89,4 @@ def get_forecast_discussion(office_city):
         section_content = "".join(split_text[1:])
         discussion += section_name + '. ' + section_content + '\n\n'
 
-    return discussion
+    return last_update + discussion
