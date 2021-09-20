@@ -1,5 +1,6 @@
 import logging
 from get_discussion import *
+import json
 
 from ask_sdk_core.skill_builder import SkillBuilder
 from ask_sdk_core.dispatch_components import (
@@ -7,6 +8,7 @@ from ask_sdk_core.dispatch_components import (
     AbstractRequestInterceptor, AbstractResponseInterceptor)
 from ask_sdk_core.utils import is_request_type, is_intent_name
 from ask_sdk_core.handler_input import HandlerInput
+from ask_sdk_core.serialize import DefaultSerializer
 
 from ask_sdk_model.ui import SimpleCard
 from ask_sdk_model import Response
@@ -60,6 +62,7 @@ class ForecastDiscussionHandler(AbstractRequestHandler):
             speech_output = OFFICE_NOT_FOUND.format(city)
 
         (handler_input.response_builder.speak(speech_output)
+                                       .ask(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
 
         return handler_input.response_builder.response
@@ -80,6 +83,7 @@ class ShortTermDiscussionHandler(AbstractRequestHandler):
         speech_output = OFFICE_NOT_FOUND if not text else 'SHORT TERM DISCUSSION FOR {}. '.format(city.upper()) + text
 
         (handler_input.response_builder.speak(speech_output)
+                                       .ask(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
 
         return handler_input.response_builder.response
@@ -100,6 +104,7 @@ class LongTermDiscussionHandler(AbstractRequestHandler):
         speech_output = OFFICE_NOT_FOUND if not text else 'LONG TERM DISCUSSION FOR {}. '.format(city.upper()) + text
 
         (handler_input.response_builder.speak(speech_output)
+                                       .ask(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
 
         return handler_input.response_builder.response
@@ -120,6 +125,7 @@ class SynopsisHandler(AbstractRequestHandler):
         speech_output = OFFICE_NOT_FOUND if not text else 'SYNOPSIS FOR {}. '.format(city.upper()) + text
 
         (handler_input.response_builder.speak(speech_output)
+                                       .ask(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
 
         return handler_input.response_builder.response
@@ -140,6 +146,7 @@ class ForecastUpdateHandler(AbstractRequestHandler):
         speech_output = OFFICE_NOT_FOUND if not text else 'FORECAST UPDATE FOR {}. '.format(city.upper()) + text
 
         (handler_input.response_builder.speak(speech_output)
+                                       .ask(speech_output)
                                        .set_card(SimpleCard(SKILL_NAME, speech_output)))
 
         return handler_input.response_builder.response
@@ -178,6 +185,27 @@ class CancelOrStopIntentHandler(AbstractRequestHandler):
         speech = STOP_MESSAGE
         handler_input.response_builder.speak(speech)
         return handler_input.response_builder.response
+
+class RepeatHandler(AbstractRequestHandler):
+    """Handler for repeating the response to the user."""
+    def can_handle(self, handler_input):
+        # type: (HandlerInput) -> bool
+        return is_intent_name("AMAZON.RepeatIntent")(handler_input)
+
+    def handle(self, handler_input):
+        # type: (HandlerInput) -> Response
+        logger.info("In RepeatHandler")
+        attr = handler_input.attributes_manager.session_attributes
+        response_builder = handler_input.response_builder
+        if "recent_response" in attr:
+            cached_response_str = json.dumps(attr["recent_response"])
+            cached_response = DefaultSerializer().deserialize(
+                cached_response_str, Response)
+            return cached_response
+        else:
+            response_builder.speak(data.FALLBACK_ANSWER).ask(data.HELP_MESSAGE)
+
+            return response_builder.response
 
 
 class FallbackIntentHandler(AbstractRequestHandler):
@@ -235,6 +263,19 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
 
         return handler_input.response_builder.response
 
+# Interceptor classes
+class CacheResponseForRepeatInterceptor(AbstractResponseInterceptor):
+    """Cache the response sent to the user in session.
+    The interceptor is used to cache the handler response that is
+    being sent to the user. This can be used to repeat the response
+    back to the user, in case a RepeatIntent is being used and the
+    skill developer wants to repeat the same information back to
+    the user.
+    """
+    def process(self, handler_input, response):
+        # type: (HandlerInput, Response) -> None
+        session_attr = handler_input.attributes_manager.session_attributes
+        session_attr["recent_response"] = response
 
 # Request and Response loggers
 class RequestLogger(AbstractRequestInterceptor):
@@ -265,11 +306,13 @@ sb.add_request_handler(HelpIntentHandler())
 sb.add_request_handler(CancelOrStopIntentHandler())
 sb.add_request_handler(FallbackIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
+sb.add_request_handler(RepeatHandler())
 
 # Register exception handlers
 sb.add_exception_handler(CatchAllExceptionHandler())
 
 # Register request and response interceptors
+sb.add_global_response_interceptor(CacheResponseForRepeatInterceptor())
 sb.add_global_request_interceptor(RequestLogger())
 sb.add_global_response_interceptor(ResponseLogger())
 
